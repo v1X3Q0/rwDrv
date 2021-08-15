@@ -58,7 +58,8 @@ int main(int argc, char** argv)
    void* printkAddr = 0;
    void* addr = 0;
    size_t len = 0;
-   unsigned char readBuf[KBUF_SIZE] = {0};
+   unsigned char netBuf[KBUF_SIZE] = {0};
+   unsigned char* readBuf = &netBuf[sizeof(size_t)];
 
    if (argc < 3)
    {
@@ -76,12 +77,11 @@ int main(int argc, char** argv)
    // meatyEbbchar(fd);
    if (len <= KBUF_SIZE)
    {
-      kRead(&fd, readBuf, len, (size_t)addr);
+      kRead(&fd, netBuf, len, (size_t)addr);
    }
 
-   dumpMem(readBuf, len);
+   dumpMem(netBuf, len);
 
-   printf("The received message is: [%s]\n", receive);
    printf("End of the program\n");
    return 0;
 }

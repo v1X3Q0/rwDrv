@@ -102,20 +102,6 @@ static long mychardev_ioctl(struct file *file, unsigned int cmd, unsigned long a
 
 static ssize_t mychardev_read(struct file *file, char __user *buf, size_t count, loff_t *offset)
 {
-    // uint8_t *data = "Hello from the kernel world!\n";
-    // size_t datalen = strlen(data);
-
-    // printk("Reading device: %d\n", MINOR(file->f_path.dentry->d_inode->i_rdev));
-
-    // if (count > datalen) {
-    //     count = datalen;
-    // }
-
-    // if (copy_to_user(buf, data, count)) {
-    //     return -EFAULT;
-    // }
-
-
     int error_count = -1;
     size_t tempThing = 0;
     size_of_message = count;
@@ -143,7 +129,6 @@ static ssize_t mychardev_read(struct file *file, char __user *buf, size_t count,
         return -EFAULT;
     }
 
-
     return count;
 }
 
@@ -153,30 +138,6 @@ static ssize_t mychardev_write(struct file *file, const char __user *buf, size_t
     opVals_t interpretState;
     void* newDest = (void*)((size_t)message + sizeof(size_t));
     
-    // size_t maxdatalen = 30;
-    // uint8_t databuf[maxdatalen];
-
-    // printk("Writing device: %d\n", MINOR(file->f_path.dentry->d_inode->i_rdev));
-
-    // if (count < maxdatalen) {
-    //     maxdatalen = count;
-    // }
-
-    // ncopied = copy_from_user(databuf, buf, maxdatalen);
-
-    // if (ncopied == 0) {
-    //     printk("Copied %zd bytes from the user\n", maxdatalen);
-    // } else {
-    //     printk("Could't copy %zd bytes from the user\n", ncopied);
-    // }
-
-    // databuf[maxdatalen] = 0;
-
-    // printk("Data from the user: %s\n", databuf);
-
-
-
-
     if (count <= KBUF_NET)
     {
         ncopied += copy_from_user(message, buf, count);
@@ -189,22 +150,16 @@ static ssize_t mychardev_write(struct file *file, const char __user *buf, size_t
             memcpy(&trackedOff, newDest, sizeof(void*));
             printk(KERN_INFO "%s: seeked to pointer %p\n", __func__, trackedOff);
         }
+        else if (trackedState == WRITE_OP)
+        {
+            count -= sizeof(void*);
+            memcpy(trackedOff, message, count);
+
+            printk(KERN_INFO "%s: Received %zu characters from the user\n", __func__, count);
+        }
     }
 
-    // else if (trackedState == WRITE_OP)
-    // {
-    //     count -= sizeof(void*);
-    //     if (count <= KBUF_SIZE)
-    //     {
-    //         ncopied += copy_from_user(message, newDest, count);
-    //         memcpy(trackedOff, message, count);
-    //     }
-
-    //     printk(KERN_INFO "%s: Received %zu characters from the user\n", __func__, count);
-    // }
     return ncopied;
-
-    // return count;
 }
 
 MODULE_LICENSE("GPL");
