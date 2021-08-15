@@ -153,7 +153,7 @@ static ssize_t mychardev_write(struct file *file, const char __user *buf, size_t
         else if (trackedState == WRITE_OP)
         {
             count -= sizeof(void*);
-            memcpy(trackedOff, message, count);
+            memcpy(trackedOff, newDest, count);
 
             printk(KERN_INFO "%s: Received %zu characters from the user\n", __func__, count);
         }
