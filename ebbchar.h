@@ -6,6 +6,13 @@
         goto fail; \
     }
 
+#define FINISH_IF(x) \
+    if (x) \
+    { \
+        goto finish; \
+    }
+
+
 #define SAFE_CLOSE(x) \
     if (x != 0) \
     { \

@@ -16,7 +16,7 @@ endif
 
 all:
 	make -C $(BUILD_PATH) M=$(PWD) modules
-	$(TARGET2) testebbchar.c ebbHelper.c -o test --static -g
+	$(TARGET2)++ testebbchar.cpp ebbHelper.cpp -o test --static -g
 clean:
 	make -C $(BUILD_PATH) M=$(PWD) clean
 	rm test
