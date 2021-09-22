@@ -7,7 +7,11 @@ else
 ifndef KERNEL_PATH
 $(error need definition for KERNEL_PATH)
 endif
-BUILD_PATH=$(KERNEL_PATH)/out/android-msm-pixel-4.9/private/msm-google/
+ifeq ($(KERNEL_VERS), )
+$(error need definition for KERNEL_VERS)
+else
+BUILD_PATH=$(KERNEL_PATH)/out/android-msm-pixel-$(KERNEL_VERS)/private/msm-google/
+endif
 endif
 
 ifeq ($(TARGET2), )
