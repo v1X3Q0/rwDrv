@@ -3,6 +3,8 @@
 *.o
 *.obj
 
+build*
+
 test
 
 # Specific to kernel development
