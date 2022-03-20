@@ -27,6 +27,9 @@ get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTO
 foreach(dir ${dirs})
     string(APPEND INCLUDE_COMPILER_STRING "-I${dir} ")
 endforeach()
+string(APPEND INCLUDE_COMPILER_STRING "-I${ANDROID_TOOL_BASE}/common/krw_util/krw_util ")
+string(APPEND INCLUDE_COMPILER_STRING "-I${ANDROID_TOOL_BASE}/linux/rwDrv/include ")
+
 
 FILE(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/Kbuild "obj-m := rw_char.o")
 FILE(APPEND ${CMAKE_CURRENT_SOURCE_DIR}/Kbuild "\nccflags-y := ${INCLUDE_COMPILER_STRING}")
@@ -39,24 +42,24 @@ FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/Makefile "\nccflags-y := ${INCLUDE_COMPI
 # set_target_properties(rw_char PROPERTIES DRV_BASE rw_char)
 
 if(DEFINED KERNEL_RELEASE)
-add_custom_command(
-    OUTPUT rw_char.ko
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-    COMMAND ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-    COMMAND ${PATCH_CRC} -m ${CMAKE_CURRENT_BINARY_DIR}/rw_char.ko -k ${KERNEL_RELEASE} -i ${VENDOR_MOD}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rw_char.c
-    )
+    add_custom_command(
+        OUTPUT rw_char.ko
+        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+        COMMAND ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+        COMMAND ${PATCH_CRC} -m ${CMAKE_CURRENT_BINARY_DIR}/rw_char.ko -k ${KERNEL_RELEASE} -i ${VENDOR_MOD}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rw_char.c
+        )
 else()
-add_custom_command(
-    OUTPUT rw_char.ko
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-    COMMAND ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rw_char.c
-    )
+    add_custom_command(
+        OUTPUT rw_char.ko
+        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+        COMMAND ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rw_char.c
+        )
 endif()
 
 add_custom_target(rw_char ALL DEPENDS rw_char.ko)

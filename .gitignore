@@ -4,7 +4,7 @@
 *.obj
 
 build*
-
+rw_char/Kbuild
 test
 
 # Specific to kernel development
