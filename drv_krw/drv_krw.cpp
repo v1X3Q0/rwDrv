@@ -9,7 +9,6 @@
 #include <localUtil.h>
 
 #include <krw_util.h>
-#include "krw.h"
 
 int fd = { 0 };
 

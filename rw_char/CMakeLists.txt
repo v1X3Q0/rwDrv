@@ -2,24 +2,52 @@ if(NOT DEFINED ARCH)
     message(FATAL_ERROR "need ARCH")
 endif()
 
-if(NOT DEFINED KERNEL_HEADERS_PATH)
-    message(FATAL_ERROR "need KERNEL_HEADERS_PATH")
-endif()    
+if (${CMAKE_SYSTEM_NAME} MATCHES "Android")
+    if(NOT DEFINED KERNEL_HEADERS_PATH)
+        message(FATAL_ERROR "need KERNEL_HEADERS_PATH")
+    endif()    
 
-if(NOT DEFINED CROSS_COMPILE)
-    message(FATAL_ERROR "need CROSS_COMPILE")
-endif()
+    if(NOT DEFINED CROSS_COMPILE)
+        message(FATAL_ERROR "need CROSS_COMPILE")
+    endif()
 
-if(NOT DEFINED CROSS_COMPILE_ARM32)
-    message(FATAL_ERROR "need CROSS_COMPILE_ARM32")
-endif()
+    if(NOT DEFINED CROSS_COMPILE_ARM32)
+        message(FATAL_ERROR "need CROSS_COMPILE_ARM32")
+    endif()
 
-if(NOT DEFINED VENDOR_MOD)
-    message(WARNING "need VENDOR_MOD")
-endif()
+    if(NOT DEFINED VENDOR_MOD)
+        message(WARNING "need VENDOR_MOD")
+    endif()
 
-if(NOT DEFINED KERNEL_RELEASE)
-    message(WARNING "need KERNEL_RELEASE, gonna build for debug kernel")
+    if(NOT DEFINED KERNEL_RELEASE)
+        message(WARNING "need KERNEL_RELEASE, gonna build for debug kernel")
+    endif()
+
+    set(PYTHON_KERN_PATCHER
+        python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+    )
+    set(PYTHON_KERN_UNPATCHER
+        python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+    )
+    set(CROSS_COMPILE_FORCE
+        CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32}
+    )
+else()
+    set(PYTHON_KERN_PATCHER
+        echo "-- no source to patch")
+    set(PYTHON_KERN_UNPATCHER
+        echo "-- no source to unpatch")
+    set(CROSS_COMPILE_FORCE
+    )
+    if (NOT DEFINED KERNEL_HEADERS_PATH)
+        # Find the kernel release
+        execute_process(
+            COMMAND uname -r
+            OUTPUT_VARIABLE KERNEL_RELEASE_VERSION
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        set(KERNEL_HEADERS_PATH "/usr/src/linux-headers-${KERNEL_RELEASE_VERSION}")
+    endif()
 endif()
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
@@ -44,9 +72,10 @@ FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/Makefile "\nccflags-y := ${INCLUDE_COMPI
 if(DEFINED KERNEL_RELEASE)
     add_custom_command(
         OUTPUT rw_char.ko
-        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-        COMMAND ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+        COMMAND ${PYTHON_KERN_PATCHER}
+        COMMAND ARCH=${ARCH} ${CROSS_COMPILE_FORCE} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${PYTHON_KERN_UNPATCHER}
+        # should we be building for an off version, will have to patch the binary in post
         COMMAND ${PATCH_CRC} -m ${CMAKE_CURRENT_BINARY_DIR}/rw_char.ko -k ${KERNEL_RELEASE} -i ${VENDOR_MOD}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rw_char.c
@@ -54,9 +83,9 @@ if(DEFINED KERNEL_RELEASE)
 else()
     add_custom_command(
         OUTPUT rw_char.ko
-        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-        COMMAND ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
+        COMMAND ${PYTHON_KERN_PATCHER}
+        COMMAND ARCH=${ARCH} ${CROSS_COMPILE_FORCE} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${PYTHON_KERN_UNPATCHER}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rw_char.c
         )
@@ -64,4 +93,6 @@ endif()
 
 add_custom_target(rw_char ALL DEPENDS rw_char.ko)
 
-add_dependencies(rw_char parseandroidkernel)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Android")
+    add_dependencies(rw_char parseandroidkernel)
+endif()
