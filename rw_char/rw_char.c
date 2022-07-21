@@ -11,6 +11,10 @@
 // linux specific share
 #include <drv_share.h>
 
+// seems like the symbols is sometimes _printk instead of printk
+// need a macro to tell.
+#define LINUX_PRINTK _printk
+
 #define MAX_DEV 2
 
 static int mychardev_open(struct inode *inode, struct file *file);
@@ -71,27 +75,27 @@ static int __init mychardev_init(void)
     // }
 
     // return 0;
-    printk(KERN_INFO "EBBChar: Initializing the EBBChar LKM\n");
+    LINUX_PRINTK(KERN_INFO "EBBChar: Initializing the EBBChar LKM\n");
 
     // Try to dynamically allocate a major number for the device -- more difficult but worth it
     majorNumber = register_chrdev(0, CHARNAME, &mychardev_fops);
     if (majorNumber < 0)
     {
-        printk(KERN_ALERT "EBBChar failed to register a major number\n");
+        LINUX_PRINTK(KERN_ALERT "EBBChar failed to register a major number\n");
         return majorNumber;
     }
-    printk(KERN_INFO "EBBChar: registered correctly with major number %d\n", majorNumber);
+    LINUX_PRINTK(KERN_INFO "EBBChar: registered correctly with major number %d\n", majorNumber);
 
     // Register the device class
     ebbcharClass = class_create(THIS_MODULE, CLASSDRV);
     if (IS_ERR(ebbcharClass))
     { // Check for error and clean up if there is
         unregister_chrdev(majorNumber, CHARNAME);
-        printk(KERN_ALERT "Failed to register device class\n");
+        LINUX_PRINTK(KERN_ALERT "Failed to register device class\n");
         return PTR_ERR(ebbcharClass); // Correct way to return an error on a pointer
     }
     ebbcharClass->dev_uevent = mychardev_uevent;
-    printk(KERN_INFO "EBBChar: device class registered correctly\n");
+    LINUX_PRINTK(KERN_INFO "EBBChar: device class registered correctly\n");
 
     // Register the device driver
     ebbcharDevice = device_create(ebbcharClass, NULL, MKDEV(majorNumber, 0), NULL, CHARNAME);
@@ -99,10 +103,10 @@ static int __init mychardev_init(void)
     {                                // Clean up if there is an error
         class_destroy(ebbcharClass); // Repeated code but the alternative is goto statements
         unregister_chrdev(majorNumber, CHARNAME);
-        printk(KERN_ALERT "Failed to create the device\n");
+        LINUX_PRINTK(KERN_ALERT "Failed to create the device\n");
         return PTR_ERR(ebbcharDevice);
     }
-    printk(KERN_INFO "EBBChar: device class created correctly\n"); // Made it! device was initialized
+    LINUX_PRINTK(KERN_INFO "EBBChar: device class created correctly\n"); // Made it! device was initialized
     return 0;
 }
 
@@ -122,24 +126,24 @@ static void __exit mychardev_exit(void)
    class_unregister(ebbcharClass);                          // unregister the device class
    class_destroy(ebbcharClass);                             // remove the device class
    unregister_chrdev(majorNumber, CHARNAME);             // unregister the major number
-   printk(KERN_INFO "EBBChar: Goodbye from the LKM!\n");
+   LINUX_PRINTK(KERN_INFO "EBBChar: Goodbye from the LKM!\n");
 }
 
 static int mychardev_open(struct inode *inode, struct file *file)
 {
-    printk("%s: Device open\n", __FILE__);
+    LINUX_PRINTK("%s: Device open\n", __FILE__);
     return 0;
 }
 
 static int mychardev_release(struct inode *inode, struct file *file)
 {
-    printk("%s: Device close\n", __FILE__);
+    LINUX_PRINTK("%s: Device close\n", __FILE__);
     return 0;
 }
 
 static long mychardev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-    printk("%s: Device ioctl\n", __FILE__);
+    LINUX_PRINTK("%s: Device ioctl\n", __FILE__);
     return 0;
 }
 
@@ -147,13 +151,13 @@ static ssize_t mychardev_read(struct file *file, char __user *buf, size_t count,
 {
     int error_count = -1;
     size_t szReadOut = count;
-    printk("%s: Device read\n", __FILE__);
+    LINUX_PRINTK("%s: Device read\n", __FILE__);
 
     if (count <= KBUF_SIZE)
     {
         if ((size_t)trackedOff == LEAK_PRINTK)
         {
-            *(size_t*)message = (size_t)printk;
+            *(size_t*)message = (size_t)LINUX_PRINTK;
             szReadOut = sizeof(size_t);
         }
         else if ((size_t)trackedOff == LEAK_DEVREAD)
@@ -180,7 +184,7 @@ static ssize_t mychardev_write(struct file *file, const char __user *buf, size_t
 {
     size_t ncopied = 0;
     seek_struct* adjustStruct = (seek_struct*)message;
-    printk("%s: Device write\n", __FILE__);
+    LINUX_PRINTK("%s: Device write\n", __FILE__);
 
     if (count <= KBUF_NET)
     {
@@ -189,12 +193,12 @@ static ssize_t mychardev_write(struct file *file, const char __user *buf, size_t
         if (adjustStruct->opVals & SEEK_OP)
         {
             trackedOff = (void*)adjustStruct->offset;
-            printk(KERN_INFO "%s: seeked to pointer 0x%lx\n", __func__, (size_t)trackedOff);
+            LINUX_PRINTK(KERN_INFO "%s: seeked to pointer 0x%lx\n", __func__, (size_t)trackedOff);
         }
         if (adjustStruct->opVals & WRITE_OP)
         {
             memcpy(trackedOff, &adjustStruct[1], adjustStruct->len);
-            printk(KERN_INFO "%s: Received %zu characters from the user\n", __func__, count);
+            LINUX_PRINTK(KERN_INFO "%s: Received %zu characters from the user\n", __func__, count);
         }
     }
 
