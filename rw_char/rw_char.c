@@ -13,7 +13,11 @@
 
 // seems like the symbols is sometimes _printk instead of printk
 // need a macro to tell.
+#ifdef LINUX_PRINTK_PREFIX
 #define LINUX_PRINTK _printk
+#else
+#define LINUX_PRINTK printk
+#endif
 
 #define MAX_DEV 2
 
@@ -23,19 +27,19 @@ static long mychardev_ioctl(struct file *file, unsigned int cmd, unsigned long a
 static ssize_t mychardev_read(struct file *file, char __user *buf, size_t count, loff_t *offset);
 static ssize_t mychardev_write(struct file *file, const char __user *buf, size_t count, loff_t *offset);
 
-static void* trackedOff = 0;
-static char   message[KBUF_NET] = {0};           ///< Memory for the string that is passed from userspace
+static void *trackedOff = 0;
+static char message[KBUF_NET] = {0}; ///< Memory for the string that is passed from userspace
 
 static const struct file_operations mychardev_fops = {
-    .owner      = THIS_MODULE,
-    .open       = mychardev_open,
-    .release    = mychardev_release,
+    .owner = THIS_MODULE,
+    .open = mychardev_open,
+    .release = mychardev_release,
     .unlocked_ioctl = mychardev_ioctl,
-    .read       = mychardev_read,
-    .write       = mychardev_write
-};
+    .read = mychardev_read,
+    .write = mychardev_write};
 
-struct mychar_device_data {
+struct mychar_device_data
+{
     struct cdev cdev;
 };
 
@@ -43,9 +47,9 @@ struct mychar_device_data {
 // static struct class *mychardev_class = NULL;
 // static struct mychar_device_data mychardev_data[MAX_DEV];
 
-static int    majorNumber;                  ///< Stores the device number -- determined automatically
-static struct class*  ebbcharClass  = NULL; ///< The device-driver class struct pointer
-static struct device* ebbcharDevice = NULL; ///< The device-driver device struct pointer
+static int majorNumber;                     ///< Stores the device number -- determined automatically
+static struct class *ebbcharClass = NULL;   ///< The device-driver class struct pointer
+static struct device *ebbcharDevice = NULL; ///< The device-driver device struct pointer
 
 static int mychardev_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
@@ -55,26 +59,6 @@ static int mychardev_uevent(struct device *dev, struct kobj_uevent_env *env)
 
 static int __init mychardev_init(void)
 {
-    // int err, i;
-    // dev_t dev;
-
-    // err = alloc_chrdev_region(&dev, 0, MAX_DEV, CHARNAME);
-
-    // dev_major = MAJOR(dev);
-
-    // mychardev_class = class_create(THIS_MODULE, CHARNAME);
-    // mychardev_class->dev_uevent = mychardev_uevent;
-
-    // for (i = 0; i < MAX_DEV; i++) {
-    //     cdev_init(&mychardev_data[i].cdev, &mychardev_fops);
-    //     mychardev_data[i].cdev.owner = THIS_MODULE;
-
-    //     cdev_add(&mychardev_data[i].cdev, MKDEV(dev_major, i), 1);
-
-    //     device_create(mychardev_class, NULL, MKDEV(dev_major, i), NULL, CHARNAME "-%d", i);
-    // }
-
-    // return 0;
     LINUX_PRINTK(KERN_INFO "EBBChar: Initializing the EBBChar LKM\n");
 
     // Try to dynamically allocate a major number for the device -- more difficult but worth it
@@ -112,21 +96,12 @@ static int __init mychardev_init(void)
 
 static void __exit mychardev_exit(void)
 {
-    // int i;
-
-    // for (i = 0; i < MAX_DEV; i++) {
-    //     device_destroy(mychardev_class, MKDEV(dev_major, i));
-    // }
-
-    // // class_unregister(mychardev_class);
-    // class_destroy(mychardev_class);
-
     // unregister_chrdev_region(MKDEV(dev_major, 0), MINORMASK);
-   device_destroy(ebbcharClass, MKDEV(majorNumber, 0));     // remove the device
-   class_unregister(ebbcharClass);                          // unregister the device class
-   class_destroy(ebbcharClass);                             // remove the device class
-   unregister_chrdev(majorNumber, CHARNAME);             // unregister the major number
-   LINUX_PRINTK(KERN_INFO "EBBChar: Goodbye from the LKM!\n");
+    device_destroy(ebbcharClass, MKDEV(majorNumber, 0)); // remove the device
+    class_unregister(ebbcharClass);                      // unregister the device class
+    class_destroy(ebbcharClass);                         // remove the device class
+    unregister_chrdev(majorNumber, CHARNAME);            // unregister the major number
+    LINUX_PRINTK(KERN_INFO "EBBChar: Goodbye from the LKM!\n");
 }
 
 static int mychardev_open(struct inode *inode, struct file *file)
@@ -157,12 +132,12 @@ static ssize_t mychardev_read(struct file *file, char __user *buf, size_t count,
     {
         if ((size_t)trackedOff == LEAK_PRINTK)
         {
-            *(size_t*)message = (size_t)LINUX_PRINTK;
+            *(size_t *)message = (size_t)LINUX_PRINTK;
             szReadOut = sizeof(size_t);
         }
         else if ((size_t)trackedOff == LEAK_DEVREAD)
         {
-            *(size_t*)message = (size_t)mychardev_read;
+            *(size_t *)message = (size_t)mychardev_read;
             szReadOut = sizeof(size_t);
         }
         else
@@ -183,16 +158,16 @@ static ssize_t mychardev_read(struct file *file, char __user *buf, size_t count,
 static ssize_t mychardev_write(struct file *file, const char __user *buf, size_t count, loff_t *offset)
 {
     size_t ncopied = 0;
-    seek_struct* adjustStruct = (seek_struct*)message;
+    seek_struct *adjustStruct = (seek_struct *)message;
     LINUX_PRINTK("%s: Device write\n", __FILE__);
 
     if (count <= KBUF_NET)
     {
         ncopied += copy_from_user(message, buf, count);
-        
+
         if (adjustStruct->opVals & SEEK_OP)
         {
-            trackedOff = (void*)adjustStruct->offset;
+            trackedOff = (void *)adjustStruct->offset;
             LINUX_PRINTK(KERN_INFO "%s: seeked to pointer 0x%lx\n", __func__, (size_t)trackedOff);
         }
         if (adjustStruct->opVals & WRITE_OP)
