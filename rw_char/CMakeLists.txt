@@ -61,7 +61,19 @@ if (DEFINED KERNEL_HEADERS_PATH)
     string(APPEND INCLUDE_COMPILER_STRING "-I${ANDROID_TOOL_BASE}/common/krw_util/krw_util ")
     string(APPEND INCLUDE_COMPILER_STRING "-I${ANDROID_TOOL_BASE}/linux/rwDrv/include ")
 
-    if (DEFINED LINUX_PRINTK_PREFIX AND LINUX_PRINTK_PREFIX MATCHES 1)
+    # check, if we are oem or generic. if generic, 
+    if (NOT DEFINED LINUX_PRINTK_PREFIX)
+        string(FIND ${KERNEL_RELEASE_VERSION} "generic" GENERIC_FOUND)
+        # found it, which means that we need the "_" before "printk"
+        if (NOT GENERIC_FOUND EQUAL -1)
+            set(LINUX_PRINTK_PREFIX 1)
+        # oem doesn't need it
+        else()
+            set(LINUX_PRINTK_PREFIX 0)
+        endif()
+    endif()
+
+    if (LINUX_PRINTK_PREFIX MATCHES 1)
         set(LINUX_PRINTK_PREFIX=1)
         string(APPEND INCLUDE_COMPILER_STRING "-DLINUX_PRINTK_PREFIX=${LINUX_PRINTK_PREFIX} ")
     endif()
