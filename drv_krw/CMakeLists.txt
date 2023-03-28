@@ -1,4 +1,4 @@
-add_library(drv_krw STATIC drv_krw.cpp)
+add_library(drv_krw SHARED drv_krw.cpp)
 
 target_include_directories(drv_krw PRIVATE
     ${ANDROID_TOOL_BASE}/common/local_util
