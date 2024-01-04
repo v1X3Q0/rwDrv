@@ -67,16 +67,3 @@ int kernel_write_ptr(void* buf, size_t len, size_t offset)
 {
    return kernel_write(buf, len, offset);
 }
-
-int get_pid_task(pid_t targ_pid, size_t* task_out)
-{
-   int result = -1;
-   void* init_task = 0;
-
-   init_task = kdlsym("init_task");
-   SAFE_BAIL(init_task == 0);
-
-   result = 0;
-fail:
-   return result;
-}

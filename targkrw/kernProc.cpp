@@ -17,53 +17,39 @@ int kernel_task(size_t* proc_out)
 	return 0;
 }
 
-int findKernProcByPid(pid_t targpid, size_t* procAddress)
+// int findKernProcByPid(pid_t targpid, size_t* procAddress)
+// {
+//     int result = -1;
+//     size_t kern_proc_local = 0;
+//     task_struct kern0 = 0;
+
+//     SAFE_BAIL(kernel_task(&kern_proc_local) == -1);
+//     kern0 = proc(kern_proc_local);
+
+//     for(; kern0.p_list().prev() != 0; kern0 = kern0.p_list().prev())
+//     {
+//         FINISH_IF(kern0.p_pid() == targpid);
+//     }
+//     goto fail;
+// finish:
+//     result = 0;
+//     if (procAddress != 0)
+//     {
+//         *procAddress = *kern0;
+//     }
+// fail:
+//     return result;
+// }
+
+int get_pid_task(pid_t targ_pid, size_t* task_out)
 {
-    int result = -1;
-    size_t kern_proc_local = 0;
-    task_struct kern0 = 0;
+   int result = -1;
+   void* init_task = 0;
 
-    SAFE_BAIL(kernel_task(&kern_proc_local) == -1);
-    kern0 = proc(kern_proc_local);
+   init_task = kdlsym("init_task");
+   SAFE_BAIL(init_task == 0);
 
-    for(; kern0.p_list().prev() != 0; kern0 = kern0.p_list().prev())
-    {
-        FINISH_IF(kern0.p_pid() == targpid);
-    }
-    goto fail;
-finish:
-    result = 0;
-    if (procAddress != 0)
-    {
-        *procAddress = *kern0;
-    }
+   result = 0;
 fail:
-    return result;
+   return result;
 }
-
-int findKernProcByPid(pid_t targpid, size_t* procAddress)
-{
-    int result = -1;
-    size_t kern_proc_local = 0;
-    eprocess proc_iter = 0;
-    size_t sys_proc_initial = 0;
-
-    SAFE_BAIL(system_eproc(&kern_proc_local) == -1);
-    proc_iter = eprocess(kern_proc_local);
-    sys_proc_initial = *proc_iter;
-
-    for (; *(proc_iter.ActiveProcessLinks().next()) != sys_proc_initial; proc_iter = *(proc_iter.ActiveProcessLinks().next()))
-    {
-        FINISH_IF(proc_iter.UniqueProcessId() == (void*)targpid);
-    }
-    goto fail;
-finish:
-    result = 0;
-    if (procAddress != 0)
-    {
-        *procAddress = *proc_iter;
-    }
-fail:
-    return result;
-}
-
