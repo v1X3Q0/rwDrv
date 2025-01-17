@@ -7,3 +7,6 @@
 [submodule "common/bgrep_c"]
 	path = common/bgrep_c
 	url = https://github.com/v1X3Q0/bgrep_c.git
+[submodule "common/kern_img"]
+	path = common/kern_img
+	url = https://github.com/v1X3Q0/kern_img.git
