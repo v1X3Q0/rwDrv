@@ -11,4 +11,4 @@ build-job:
     - apt-get update && apt-get install -y cmake make gcc g++ clang
     - mkdir -p build-out && cd build-out
     - cmake ..
-    - make
+    - VERBOSE=1 make
