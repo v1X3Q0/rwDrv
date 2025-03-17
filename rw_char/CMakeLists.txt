@@ -2,6 +2,11 @@ if(NOT DEFINED ARCH)
     message(FATAL_ERROR "need ARCH")
 endif()
 
+set(INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${ANDROID_TOOL_BASE}/common/krw_util/krw_util
+    )
+
 if (${CMAKE_SYSTEM_NAME} MATCHES "Android")
     if(NOT DEFINED KERNEL_HEADERS_PATH)
         message(WARNING "need KERNEL_HEADERS_PATH, skipping driver")
@@ -22,24 +27,12 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Android")
             message(WARNING "need KERNEL_RELEASE, gonna build for debug kernel")
         endif()
 
-        set(PYTHON_KERN_PATCHER
-            python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py patch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-        )
-        set(PYTHON_KERN_UNPATCHER
-            python3 ${CMAKE_SOURCE_DIR}/linux/helpers/scripts/patch_kern_build.py unpatch ${KERNEL_HEADERS_PATH}/../../../../private/msm-google/Makefile ${CMAKE_CURRENT_BINARY_DIR}/Makefile.bkp_kern
-        )
         set(CROSS_COMPILE_FORCE
             CROSS_COMPILE=${CROSS_COMPILE} CROSS_COMPILE_ARM32=${CROSS_COMPILE_ARM32}
         )        
     endif()
-
 else()
-    set(PYTHON_KERN_PATCHER
-        echo "-- no source to patch")
-    set(PYTHON_KERN_UNPATCHER
-        echo "-- no source to unpatch")
-    set(CROSS_COMPILE_FORCE
-    )
+    set(CROSS_COMPILE_FORCE)
     if (NOT DEFINED KERNEL_HEADERS_PATH)
         # Find the kernel release
         execute_process(
@@ -54,25 +47,13 @@ endif()
 # we have something for kernel headers, then we're building the driver
 if (DEFINED KERNEL_HEADERS_PATH)
     get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-
+    list(APPEND dirs ${INCLUDE_DIRS})
     foreach(dir ${dirs})
         string(APPEND INCLUDE_COMPILER_STRING "-I${dir} ")
     endforeach()
-    string(APPEND INCLUDE_COMPILER_STRING "-I${ANDROID_TOOL_BASE}/common/krw_util/krw_util ")
-    string(APPEND INCLUDE_COMPILER_STRING "-I${ANDROID_TOOL_BASE}/linux/rwDrv/include ")
-
+    
     # check, if we are oem or generic. if generic, 
-    if (NOT DEFINED LINUX_PRINTK_PREFIX)
-        string(FIND ${KERNEL_RELEASE_VERSION} "generic" GENERIC_FOUND)
-        # found it, which means that we need the "_" before "printk"
-        if (NOT GENERIC_FOUND EQUAL -1)
-            set(LINUX_PRINTK_PREFIX 1)
-        # oem doesn't need it
-        else()
-            set(LINUX_PRINTK_PREFIX 0)
-        endif()
-    endif()
-
+    #     # found it, which means that we need the "_" before "printk"
     if (LINUX_PRINTK_PREFIX MATCHES 1)
         set(LINUX_PRINTK_PREFIX=1)
         string(APPEND INCLUDE_COMPILER_STRING "-DLINUX_PRINTK_PREFIX=${LINUX_PRINTK_PREFIX} ")
@@ -84,16 +65,15 @@ if (DEFINED KERNEL_HEADERS_PATH)
     FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Makefile "obj-m := rw_char.o")
     FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/Makefile "\nccflags-y := ${INCLUDE_COMPILER_STRING}")
 
-    # FILE(COPY_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Kbuild ${CMAKE_CURRENT_SOURCE_DIR}/Makefile)
-
-    # set_target_properties(rw_char PROPERTIES DRV_BASE rw_char)
+    set(KARCH ${ARCH})
+    if(${KARCH} STREQUAL "aarch64")
+        set(KARCH arm64)
+    endif()
 
     if(DEFINED KERNEL_RELEASE)
         add_custom_command(
             OUTPUT rw_char.ko
-            COMMAND ${PYTHON_KERN_PATCHER}
-            COMMAND ARCH=${ARCH} ${CROSS_COMPILE_FORCE} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
-            COMMAND ${PYTHON_KERN_UNPATCHER}
+            COMMAND ARCH=${KARCH} ${CROSS_COMPILE_FORCE} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
             # should we be building for an off version, will have to patch the binary in post
             COMMAND ${PATCH_CRC} -m ${CMAKE_CURRENT_BINARY_DIR}/rw_char.ko -k ${KERNEL_RELEASE} -i ${VENDOR_MOD}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -102,9 +82,7 @@ if (DEFINED KERNEL_HEADERS_PATH)
     else()
         add_custom_command(
             OUTPUT rw_char.ko
-            COMMAND ${PYTHON_KERN_PATCHER}
-            COMMAND ARCH=${ARCH} ${CROSS_COMPILE_FORCE} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
-            COMMAND ${PYTHON_KERN_UNPATCHER}
+            COMMAND ARCH=${KARCH} ${CROSS_COMPILE_FORCE} make -C ${KERNEL_HEADERS_PATH} M=${CMAKE_CURRENT_BINARY_DIR} modules src=${CMAKE_CURRENT_SOURCE_DIR}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rw_char.c
             )

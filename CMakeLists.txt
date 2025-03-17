@@ -33,4 +33,4 @@ endif()
 
 add_subdirectory(drv_krw)
 add_subdirectory(targkrw)
-# add_subdirectory(rw_char)
+add_subdirectory(rw_char)
