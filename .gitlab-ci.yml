@@ -10,5 +10,6 @@ build-job:
   script:
     - apt-get update && apt-get install -y cmake make gcc g++ clang linux-headers-$(uname -r)
     - mkdir -p build-out && cd build-out
+    # debian uses the prefix, for _printk
     - cmake -DLINUX_PRINTK_PREFIX=1 ..
     - VERBOSE=1 make
