@@ -8,7 +8,7 @@ build-job:
     GIT_SUBMODULE_STRATEGY: normal
     GIT_SUBMODULE_DEPTH: 1
   script:
-    - apt-get update && apt-get install -y cmake make gcc g++ clang
+    - apt-get update && apt-get install -y cmake make gcc g++ clang linux-headers-$(uname -r)
     - mkdir -p build-out && cd build-out
     - cmake ..
     - VERBOSE=1 make
