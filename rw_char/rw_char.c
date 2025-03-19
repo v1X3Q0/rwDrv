@@ -51,7 +51,11 @@ static int majorNumber;                     ///< Stores the device number -- det
 static struct class *ebbcharClass = NULL;   ///< The device-driver class struct pointer
 static struct device *ebbcharDevice = NULL; ///< The device-driver device struct pointer
 
+#if defined(MYCHARCONST)
+static int mychardev_uevent(const struct device *dev, struct kobj_uevent_env *env)
+#else
 static int mychardev_uevent(struct device *dev, struct kobj_uevent_env *env)
+#endif
 {
     add_uevent_var(env, "DEVMODE=%#o", 0666);
     return 0;
@@ -71,7 +75,11 @@ static int __init mychardev_init(void)
     LINUX_PRINTK(KERN_INFO "EBBChar: registered correctly with major number %d\n", majorNumber);
 
     // Register the device class
+#if defined(MYCHARCONST)
+    ebbcharClass = class_create(CLASSDRV);
+#else
     ebbcharClass = class_create(THIS_MODULE, CLASSDRV);
+#endif
     if (IS_ERR(ebbcharClass))
     { // Check for error and clean up if there is
         unregister_chrdev(majorNumber, CHARNAME);
